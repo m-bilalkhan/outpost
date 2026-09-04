@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   description: "Scheduled email, and eventually everything else.",
 };
 
+const NAV = [
+  ["/", "Compose"],
+  ["/contacts", "Contacts"],
+  ["/templates", "Templates"],
+] as const;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -13,13 +19,17 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen antialiased">
         <div className="mx-auto max-w-3xl px-5 py-8">
-          <header className="mb-8 flex items-baseline justify-between border-b border-black/10 pb-3 dark:border-white/10">
+          <header className="mb-8 flex flex-wrap items-baseline gap-x-5 gap-y-2 border-b border-black/10 pb-3 dark:border-white/10">
             <a href="/" className="text-lg font-semibold tracking-tight">
               Outpost
             </a>
-            <span className="text-xs uppercase tracking-widest opacity-50">
-              scheduled mail
-            </span>
+            <nav className="flex gap-4 text-xs uppercase tracking-widest">
+              {NAV.map(([href, title]) => (
+                <a key={href} href={href} className="opacity-50 hover:opacity-100">
+                  {title}
+                </a>
+              ))}
+            </nav>
           </header>
           {children}
         </div>

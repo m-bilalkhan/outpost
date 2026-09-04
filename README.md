@@ -101,6 +101,57 @@ Missing contact fields are guessed from the address (first name from the local
 part, company from the domain) and shown as editable defaults. They are never
 used silently, and a value you have corrected is never overwritten.
 
+## Pages
+
+| | |
+|---|---|
+| `/` | Compose from an address, and the outbox |
+| `/message/[id]` | Review, fill blanks, preview, schedule |
+| `/contacts` | Add, edit and delete people |
+| `/templates` | Outreach and follow-up templates, one default each |
+
+A contact with a draft or scheduled message cannot be deleted, and your last
+remaining template cannot be deleted either. Deleting the default template
+promotes the oldest remaining one, so there is always something to fall back on.
+
+## Filling blanks
+
+Anything the template could not fill stays visible as `{{like_this}}` and blocks
+scheduling. On the review screen the blanks Outpost recognises
+(`first_name`, `last_name`, `company`, `role`) appear as inputs: type a value,
+press **Fill in**, and it is written to the contact *and* substituted into this
+draft. Substituted in place, not re-rendered -- whatever you had already edited
+by hand survives. The next draft to that person starts with the value already
+there.
+
+## Follow-ups
+
+Open a **sent** message and press **Write follow-up**. Outpost drafts a reply
+from your default follow-up template, addressed to the same person, and threads
+it properly: `In-Reply-To` and `References` carry the original's Message-Id, and
+the subject becomes `Re: <original>`. It lands under the original in their mail
+client rather than arriving as a separate email. Review and schedule it exactly
+like any other message.
+
+A follow-up template with a **blank subject** inherits `Re: <original subject>`.
+That is usually what you want -- Gmail groups on subject as well as headers.
+Give it a subject only if you deliberately want to break out of the thread.
+
+Threads are visible on the message page and marked with `↳` in the outbox, so a
+three-message chain reads as one conversation.
+
+> **Outpost cannot see your inbox — by design.** It has no idea whether someone
+> has replied, so it will happily send a follow-up to a person who answered you
+> yesterday. Check before you schedule. Everything currently queued is listed
+> under **Going out next** on the home page with a one-click cancel, so nothing
+> should ever surprise you.
+
+## Applying a migration
+
+`db/schema.sql` is for a fresh database. When the schema changes, a numbered
+file appears in `db/migrations/` — paste it into the Supabase SQL editor and
+run it. They are idempotent, so running one twice is harmless.
+
 ## How the queue behaves
 
 - Claims with `FOR UPDATE SKIP LOCKED`, so overlapping ticks skip each other's

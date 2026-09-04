@@ -31,6 +31,10 @@ export type OutgoingMail = {
   html: string;
   text: string;
   messageId: string;
+  /** RFC 5322 Message-Id of the message being replied to, if any. */
+  inReplyTo?: string | null;
+  /** Space-separated chain of ancestor Message-Ids. */
+  references?: string | null;
 };
 
 /** Build the exact bytes once, so SMTP and the Sent folder agree. */
@@ -42,6 +46,8 @@ export async function buildRaw(mail: OutgoingMail): Promise<Buffer> {
     text: mail.text,
     html: mail.html,
     messageId: mail.messageId,
+    ...(mail.inReplyTo ? { inReplyTo: mail.inReplyTo } : {}),
+    ...(mail.references ? { references: mail.references.split(/\s+/) } : {}),
   });
   return await new Promise<Buffer>((resolve, reject) => {
     composer.compile().build((err, message) => {

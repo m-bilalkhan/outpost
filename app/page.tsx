@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { env } from "@/lib/env";
 import { formatInZone } from "@/lib/time";
+import { CancelButton } from "./cancel-button";
 import { ComposeForm } from "./compose-form";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ type Row = {
   sent_at: string | null;
   last_error: string | null;
   run_at: string | null;
-  job_status: string | null;
+  parent_id: string | null;
 };
 
 const PILL: Record<string, string> = {
@@ -26,18 +27,24 @@ const PILL: Record<string, string> = {
 
 export default async function Home() {
   const templates = await sql<{ id: string; name: string }[]>`
-    select id, name from templates order by is_default desc, name
+    select id, name from templates
+    where kind = 'outreach'
+    order by is_default desc, name
   `;
 
   const rows = await sql<Row[]>`
     select m.id, m.to_email, m.subject, m.status, m.sent_at, m.last_error,
-           j.run_at, j.status as job_status
+           m.parent_id, j.run_at
     from messages m
     left join jobs j
       on j.kind = 'email.send' and j.payload->>'messageId' = m.id::text
     order by m.created_at desc
     limit 40
   `;
+
+  const pending = rows
+    .filter((r) => r.status === "scheduled" && r.run_at)
+    .sort((a, b) => (a.run_at! < b.run_at! ? -1 : 1));
 
   return (
     <main className="flex flex-col gap-10">
@@ -51,6 +58,38 @@ export default async function Home() {
           anything is scheduled.
         </p>
       </section>
+
+      {pending.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-widest opacity-60">
+            Going out next
+          </h2>
+          <ul className="divide-y divide-amber-300/40 rounded border border-amber-300/60 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/15">
+            {pending.map((r) => (
+              <li key={r.id} className="flex items-center gap-3 px-3 py-2.5">
+                <a href={`/message/${r.id}`} className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">
+                    {r.parent_id && (
+                      <span className="mr-1.5 opacity-50" aria-label="follow-up">
+                        &#8627;
+                      </span>
+                    )}
+                    {r.subject || "(no subject)"}
+                  </div>
+                  <div className="truncate text-xs opacity-70">
+                    {r.to_email} &middot; {formatInZone(r.run_at!, env.tz)}
+                  </div>
+                </a>
+                <CancelButton messageId={r.id} />
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs opacity-50">
+            Outpost cannot see your inbox, so it will send these even if the
+            person has already replied. Cancel anything that is no longer needed.
+          </p>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-widest opacity-60">
@@ -69,6 +108,11 @@ export default async function Home() {
                 </span>
                 <a href={`/message/${r.id}`} className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">
+                    {r.parent_id && (
+                      <span className="mr-1.5 opacity-50" aria-label="follow-up">
+                        &#8627;
+                      </span>
+                    )}
                     {r.subject || "(no subject)"}
                   </div>
                   <div className="truncate text-xs opacity-60">

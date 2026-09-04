@@ -23,13 +23,15 @@ create table if not exists templates (
   subject_tpl  text not null,
   body_tpl     text not null,
   default_vars jsonb not null default '{}'::jsonb,
+  kind         text not null default 'outreach'
+               check (kind in ('outreach','followup')),
   is_default   boolean not null default false,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
--- at most one default template
-create unique index if not exists templates_one_default
-  on templates ((true)) where is_default;
+-- at most one default per kind
+create unique index if not exists templates_one_default_per_kind
+  on templates (kind) where is_default;
 
 -- ---------------------------------------------------------------- messages
 -- content only. scheduling lives in jobs.
@@ -44,6 +46,11 @@ create table if not exists messages (
   body_text       text not null default '',
   status          text not null default 'draft'
                   check (status in ('draft','scheduled','sent','failed','cancelled')),
+  -- threading: a root message threads to itself, a reply carries its parent's
+  thread_id       uuid,
+  parent_id       uuid references messages(id) on delete set null,
+  in_reply_to     text,
+  rfc_references  text,
   sent_at         timestamptz,
   smtp_message_id text,
   last_error      text,
@@ -51,6 +58,24 @@ create table if not exists messages (
   updated_at      timestamptz not null default now()
 );
 create index if not exists messages_status_idx on messages (status, created_at desc);
+create index if not exists messages_thread_idx on messages (thread_id, created_at);
+create index if not exists messages_parent_idx on messages (parent_id);
+
+-- Column defaults are applied before BEFORE-row triggers fire, so new.id
+-- is already populated here.
+create or replace function messages_set_thread_id() returns trigger as $$
+begin
+  if new.thread_id is null then
+    new.thread_id := new.id;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists messages_thread_id_trg on messages;
+create trigger messages_thread_id_trg
+  before insert on messages
+  for each row execute function messages_set_thread_id();
 
 -- -------------------------------------------------------------------- jobs
 -- THE table. every future module (reminders, posts, follow-ups) writes here.
@@ -87,10 +112,20 @@ create table if not exists job_events (
 create index if not exists job_events_job_idx on job_events (job_id, at desc);
 
 -- -------------------------------------------------------------- seed data
-insert into templates (name, subject_tpl, body_tpl, is_default)
+insert into templates (name, subject_tpl, body_tpl, kind, is_default)
 select
   'Default outreach',
   'Quick question, {{first_name}}',
   E'Hi {{first_name}},\n\nI came across {{company}} and wanted to reach out.\n\n[ your pitch here ]\n\nBest,\n{{my_name}}',
+  'outreach',
   true
-where not exists (select 1 from templates);
+where not exists (select 1 from templates where kind = 'outreach');
+
+insert into templates (name, subject_tpl, body_tpl, kind, is_default)
+select
+  'Default follow-up',
+  '',   -- the reply endpoint fills this with "Re: <original subject>"
+  E'Hi {{first_name}},\n\nQuick follow-up on my note below \u2014 I know inboxes get busy.\n\nStill happy to talk whenever suits you.\n\nBest,\n{{my_name}}',
+  'followup',
+  true
+where not exists (select 1 from templates where kind = 'followup');

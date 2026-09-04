@@ -14,6 +14,8 @@ type MessageRow = {
   body_text: string;
   status: string;
   smtp_message_id: string | null;
+  in_reply_to: string | null;
+  rfc_references: string | null;
 };
 
 register("email.send", {
@@ -22,7 +24,8 @@ register("email.send", {
     if (!messageId) throw new PermanentError("payload.messageId is required");
 
     const [msg] = await sql<MessageRow[]>`
-      select id, to_email, to_name, subject, body_html, body_text, status, smtp_message_id
+      select id, to_email, to_name, subject, body_html, body_text, status,
+             smtp_message_id, in_reply_to, rfc_references
       from messages where id = ${messageId}
     `;
     if (!msg) throw new PermanentError(`message ${messageId} not found`);
@@ -52,6 +55,8 @@ register("email.send", {
       html: msg.body_html,
       text: msg.body_text,
       messageId: rfcMessageId,
+      inReplyTo: msg.in_reply_to,
+      references: msg.rfc_references,
     });
 
     await sendRaw(raw, msg.to_email);

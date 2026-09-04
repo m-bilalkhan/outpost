@@ -11,6 +11,15 @@ export function render(tpl: string, vars: Vars): string {
   });
 }
 
+/**
+ * Replace only the named variables, leaving every other placeholder alone.
+ * Used when filling one blank on the review screen: a full re-render from the
+ * template would throw away whatever you had already edited by hand.
+ */
+export function substitute(text: string, subs: Record<string, string>): string {
+  return text.replace(VAR_RE, (whole, key: string) => subs[key] ?? whole);
+}
+
 /** Every {{var}} still present in the text. */
 export function missingVars(...texts: string[]): string[] {
   const found = new Set<string>();

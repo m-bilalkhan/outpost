@@ -22,12 +22,15 @@ export const contacts = pgTable("contacts", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export type TemplateKind = "outreach" | "followup";
+
 export const templates = pgTable("templates", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   subjectTpl: text("subject_tpl").notNull(),
   bodyTpl: text("body_tpl").notNull(),
   defaultVars: jsonb("default_vars").$type<Record<string, string>>().notNull().default({}),
+  kind: text("kind").$type<TemplateKind>().notNull().default("outreach"),
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -50,6 +53,10 @@ export const messages = pgTable("messages", {
   bodyHtml: text("body_html").notNull().default(""),
   bodyText: text("body_text").notNull().default(""),
   status: text("status").$type<MessageStatus>().notNull().default("draft"),
+  threadId: uuid("thread_id"),
+  parentId: uuid("parent_id"),
+  inReplyTo: text("in_reply_to"),
+  rfcReferences: text("rfc_references"),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   smtpMessageId: text("smtp_message_id"),
   lastError: text("last_error"),

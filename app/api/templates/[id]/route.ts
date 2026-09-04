@@ -9,6 +9,7 @@ const Patch = z.object({
   name: z.string().min(1).max(120),
   subjectTpl: z.string().max(998),
   bodyTpl: z.string(),
+  kind: z.enum(["outreach", "followup"]),
   isDefault: z.boolean(),
 });
 
@@ -19,19 +20,26 @@ export async function PATCH(
   const { id } = await params;
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Name, subject and body are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Name, subject, body and kind are required" },
+      { status: 400 },
+    );
   }
   const t = parsed.data;
 
   const updated = await sql.begin(async (tx) => {
     if (t.isDefault) {
-      await tx`update templates set is_default = false where is_default and id <> ${id}`;
+      await tx`
+        update templates set is_default = false
+        where is_default and kind = ${t.kind} and id <> ${id}
+      `;
     }
     const rows = await tx<{ id: string }[]>`
       update templates set
         name        = ${t.name},
         subject_tpl = ${t.subjectTpl},
         body_tpl    = ${t.bodyTpl},
+        kind        = ${t.kind},
         is_default  = ${t.isDefault},
         updated_at  = now()
       where id = ${id}
@@ -50,28 +58,34 @@ export async function DELETE(
 ) {
   const { id } = await params;
 
+  const [target] = await sql<{ kind: string; is_default: boolean }[]>`
+    select kind, is_default from templates where id = ${id}
+  `;
+  if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Composing needs an outreach template; following up needs a follow-up one.
   const [{ count }] = await sql<{ count: number }[]>`
-    select count(*)::int as count from templates
+    select count(*)::int as count from templates where kind = ${target.kind}
   `;
   if (count <= 1) {
     return NextResponse.json(
-      { error: "This is your only template. Create another one first." },
+      {
+        error: `This is your only ${target.kind === "followup" ? "follow-up" : "outreach"} template. Create another one first.`,
+      },
       { status: 409 },
     );
   }
 
-  const rows = await sql<{ is_default: boolean }[]>`
-    delete from templates where id = ${id} returning is_default
-  `;
-  if (rows.length === 0) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  await sql`delete from templates where id = ${id}`;
 
-  // Never leave the app with no default to fall back on.
-  if (rows[0].is_default) {
+  // Never leave a kind without a default to fall back on.
+  if (target.is_default) {
     await sql`
       update templates set is_default = true
-      where id = (select id from templates order by created_at limit 1)
+      where id = (
+        select id from templates where kind = ${target.kind}
+        order by created_at limit 1
+      )
     `;
   }
 
