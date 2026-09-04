@@ -69,22 +69,59 @@ lands and a copy appears in your Sent folder.
 
 ## 4. Deploy
 
-**Vercel** — push to a *personal* GitHub repo (Hobby cannot connect to org
-repos), import it, and add every variable from `.env.example` to the project.
+Two separate deployments to two separate services. They only know about each
+other through a URL and a shared secret.
 
-**Cloudflare Worker** — the heartbeat:
+| | Where it runs | What deploys it |
+|---|---|---|
+| The app (`app/`, `lib/`) | Vercel | git push |
+| The heartbeat (`worker/`) | Cloudflare | `wrangler deploy`, from your machine |
+
+Vercel never looks inside `worker/`, and Cloudflare never sees the app's code.
+Do them in this order, because the worker needs the app's URL.
+
+### 4a. The app, on Vercel
+
+Push to a **personal** GitHub repo (Hobby cannot connect to org repos), import
+it, and add every variable from `.env.example` to the project. Vercel runs its
+own `npm install` from the root `package.json` — you do nothing locally for
+this. Note the deployed URL.
+
+### 4b. The worker, on Cloudflare
+
+All of this runs **on your own machine**, in a terminal. `npm install` here
+installs the `wrangler` CLI locally so you can deploy from your laptop — it has
+nothing to do with Vercel, and nothing in `worker/node_modules` is ever
+uploaded anywhere. Wrangler bundles `src/index.ts` and sends only that.
 
 ```bash
 cd worker
-npm install
-# set OUTPOST_URL in wrangler.toml to your deployed URL first
-npx wrangler secret put CRON_SHARED_SECRET   # same value as the app
-npx wrangler deploy
-npx wrangler tail                            # watch it tick
+npm install                                  # local: installs the wrangler CLI
+npx wrangler login                           # opens a browser, one time only
 ```
 
-**Cloudflare Access** (optional but recommended) — this app can send mail as
-you, so put Google login in front of it in Zero Trust.
+Then set `OUTPOST_URL` in `wrangler.toml` to the Vercel URL from 4a (no
+trailing slash), and:
+
+```bash
+npx wrangler secret put CRON_SHARED_SECRET   # paste the SAME value as in Vercel
+npx wrangler deploy
+npx wrangler tail                            # watch it tick, once a minute
+```
+
+The secret is stored by Cloudflare, not in `wrangler.toml` — which is committed,
+so never put it there. If the two secrets do not match exactly, every tick comes
+back `401` and nothing sends; `wrangler tail` shows that immediately.
+
+To sanity-check the bundle without deploying anything:
+
+```bash
+npx wrangler deploy --dry-run
+```
+
+### 4c. Cloudflare Access (optional but recommended)
+
+This app can send mail as you, so put Google login in front of it in Zero Trust.
 
 > ⚠️ Add a **bypass policy for `/api/cron/*`** when you do. Otherwise the
 > Worker's request gets an HTML login page instead of your handler and nothing
