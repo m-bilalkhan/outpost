@@ -1,0 +1,15 @@
+name = "outpost-cron"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# The heartbeat. Every minute, forever. It carries no payload and knows
+# nothing about email -- "what is due" is a database question.
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+# Your deployed app, no trailing slash.
+OUTPOST_URL = "https://outpost-CHANGE-ME.vercel.app"
+
+# CRON_SHARED_SECRET is a secret, not a var:
+#   npx wrangler secret put CRON_SHARED_SECRET

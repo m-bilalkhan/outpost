@@ -1,0 +1,135 @@
+# Outpost
+
+Type an address. Outpost fills your template, lets you edit it, and sends it at
+the minute you picked — from your own Namecheap mailbox, with a copy in Sent.
+
+The important part is not the email. It is the `jobs` table: one queue, one
+runner, one handler per kind. Reminders, todos and scheduled posts are later
+handlers on the same machinery, not new subsystems.
+
+```
+lib/jobs/runner.ts            the queue: claim, retry, reclaim, alert
+lib/jobs/registry.ts          register(kind, handler)
+lib/jobs/handlers/            one file per kind of scheduled work
+  email-send.ts               the only handler so far
+```
+
+---
+
+## 1. Database
+
+Create a free project at [supabase.com](https://supabase.com). Then:
+
+1. **SQL Editor → New query**, paste all of `db/schema.sql`, **Run**.
+2. **Project Settings → Database → Connection string → Transaction pooler**
+   (port `6543`). Copy it and put your password in.
+
+> Supabase is the right free tier here specifically because the minute-tick
+> keeps the project active. Neon's free plan meters compute-hours and would
+> suspend the project partway through the month.
+
+## 2. Mailbox
+
+In the Namecheap Private Email dashboard:
+
+1. Generate an **application password** (not your master password — you want to
+   be able to revoke this one on its own).
+2. Confirm **DKIM** is enabled for the domain.
+
+Settings the app uses, for reference:
+
+| | Host | Port | Encryption |
+|---|---|---|---|
+| SMTP | `mail.privateemail.com` | 465 | SSL/TLS |
+| IMAP | `mail.privateemail.com` | 993 | SSL/TLS |
+
+## 3. Run it locally
+
+```bash
+npm install
+cp .env.example .env.local     # then fill it in
+npm run dev
+```
+
+Generate the cron secret with `openssl rand -hex 32` (or any 32-byte hex
+string).
+
+Now prove the loop end to end:
+
+1. Open <http://localhost:3000>, enter your own address, click **Draft**.
+2. Edit the body, set the send time a couple of minutes out, **Approve & schedule**.
+3. Fire a tick by hand instead of waiting for Cloudflare:
+
+```bash
+node --env-file=.env.local scripts/tick.mjs
+```
+
+It prints what it claimed and what happened. When the time arrives, the mail
+lands and a copy appears in your Sent folder.
+
+## 4. Deploy
+
+**Vercel** — push to a *personal* GitHub repo (Hobby cannot connect to org
+repos), import it, and add every variable from `.env.example` to the project.
+
+**Cloudflare Worker** — the heartbeat:
+
+```bash
+cd worker
+npm install
+# set OUTPOST_URL in wrangler.toml to your deployed URL first
+npx wrangler secret put CRON_SHARED_SECRET   # same value as the app
+npx wrangler deploy
+npx wrangler tail                            # watch it tick
+```
+
+**Cloudflare Access** (optional but recommended) — this app can send mail as
+you, so put Google login in front of it in Zero Trust.
+
+> ⚠️ Add a **bypass policy for `/api/cron/*`** when you do. Otherwise the
+> Worker's request gets an HTML login page instead of your handler and nothing
+> ever sends. That path protects itself with the HMAC.
+
+## 5. Templates
+
+Templates live in the `templates` table; `db/schema.sql` seeds one. Variables
+are `{{first_name}}`, `{{last_name}}`, `{{company}}`, `{{role}}`, `{{email}}`
+and `{{my_name}}`. Anything unfilled stays visible as `{{like_this}}` and
+**blocks scheduling** — both in the UI and again in the handler.
+
+Missing contact fields are guessed from the address (first name from the local
+part, company from the domain) and shown as editable defaults. They are never
+used silently, and a value you have corrected is never overwritten.
+
+## How the queue behaves
+
+- Claims with `FOR UPDATE SKIP LOCKED`, so overlapping ticks skip each other's
+  rows instead of double-sending.
+- A job stuck in `running` for 5 minutes (killed function, crashed deploy) is
+  reclaimed on a later tick.
+- Retries back off 1, 2, 4 minutes, up to `max_attempts`. Then the job fails,
+  the message is marked failed, and **you get an email about it**.
+- `smtp_message_id` is written the moment SMTP accepts. A retry after a crash
+  sees it and refuses to send again.
+- `MAX_SENDS_PER_HOUR` (default 20) throttles well under the mailbox's 500/hour
+  ceiling — a personal account emitting 200 near-identical mails in an hour is
+  what spam filtering is built to notice.
+- Times are stored `timestamptz` in UTC and only ever converted for display,
+  using `APP_TZ`.
+
+## Adding the next module
+
+```ts
+// lib/jobs/handlers/reminder-fire.ts
+import { register } from "../registry";
+
+register("reminder.fire", {
+  async run(payload) {
+    // ...
+    return { ok: true };
+  },
+});
+```
+
+Then add one line to `lib/jobs/index.ts`. That is the whole cost — retries,
+reclaim, the audit trail and the failure alert all come for free.
