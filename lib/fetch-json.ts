@@ -37,9 +37,9 @@ export async function fetchJson<T = unknown>(
     if (text.trimStart().startsWith("<")) {
       throw new Error(
         `The server returned a web page instead of data (${res.status}). ` +
-          `Something is failing on the server — check the terminal running ` +
-          `\`npm run dev\` for the real error. A missing dependency after a ` +
-          `\`git pull\` is the usual cause: try \`npm install\`.`,
+          `Open /api/health — it reports missing environment variables, a ` +
+          `database it cannot reach, and migrations that have not been run. ` +
+          `Locally, the terminal running \`npm run dev\` has the real error.`,
       );
     }
     throw new Error(

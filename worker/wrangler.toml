@@ -9,7 +9,7 @@ crons = ["* * * * *"]
 
 [vars]
 # Your deployed app, no trailing slash.
-OUTPOST_URL = "outpost-navy.vercel.app"
+OUTPOST_URL = "https://outpost-navy.vercel.app"
 
 # CRON_SHARED_SECRET is a secret, not a var:
 #   npx wrangler secret put CRON_SHARED_SECRET

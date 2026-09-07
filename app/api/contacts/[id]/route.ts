@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,10 +35,10 @@ function pick(
   return trimmed === "" ? null : trimmed;
 }
 
-export async function PATCH(
+export const PATCH = withErrors(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -63,12 +64,12 @@ export async function PATCH(
   `;
 
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(
+export const DELETE = withErrors(async (
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const [pending] = await sql<{ count: number }[]>`
     select count(*)::int as count from messages
@@ -84,4 +85,4 @@ export async function DELETE(
   }
   await sql`delete from contacts where id = ${id}`;
   return NextResponse.json({ ok: true });
-}
+});

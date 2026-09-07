@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 import { sanitizeEmailHtml } from "@/lib/html";
 
 export const runtime = "nodejs";
@@ -14,10 +15,10 @@ const Patch = z.object({
   isDefault: z.boolean(),
 });
 
-export async function PATCH(
+export const PATCH = withErrors(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -51,12 +52,12 @@ export async function PATCH(
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(
+export const DELETE = withErrors(async (
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
 
   const [target] = await sql<{ kind: string; is_default: boolean }[]>`
@@ -91,4 +92,4 @@ export async function DELETE(
   }
 
   return NextResponse.json({ ok: true });
-}
+});

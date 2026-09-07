@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 import { htmlToPlainText, sanitizeEmailHtml } from "@/lib/html";
 
 export const runtime = "nodejs";
@@ -11,10 +12,10 @@ const Patch = z.object({
   bodyHtml: z.string().max(500_000),
 });
 
-export async function PATCH(
+export const PATCH = withErrors(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -40,12 +41,12 @@ export async function PATCH(
     );
   }
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(
+export const DELETE = withErrors(async (
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
 
   const rows = await sql<{ id: string }[]>`
@@ -64,4 +65,4 @@ export async function DELETE(
   `;
 
   return NextResponse.json({ ok: true });
-}
+});

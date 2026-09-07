@@ -206,6 +206,19 @@ re-sanitizes. If a placeholder somehow survives unrendered, the scheduling guard
 still refuses the send, so the worst case is a clear error rather than a bad
 email.
 
+## When something breaks in production
+
+Open **`/api/health`** on the deployed app. It answers in one request:
+
+- which required environment variables are **present** (never their values)
+- whether the database is reachable, and how long it took
+- which migrations have landed, and which still need running
+
+A `503` there names the problem and the fix. If it says `ok: true` and a page
+still fails, the failing request itself now returns JSON with the real error
+message rather than a blank 500 page — every route handler is wrapped in
+`withErrors` from `lib/api.ts`.
+
 ## Applying a migration
 
 `db/schema.sql` is for a fresh database. When the schema changes, a numbered

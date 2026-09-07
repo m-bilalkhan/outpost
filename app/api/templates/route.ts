@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 import { sanitizeEmailHtml } from "@/lib/html";
 
 export const runtime = "nodejs";
@@ -16,15 +17,15 @@ const Create = z.object({
   isDefault: z.boolean().default(false),
 });
 
-export async function GET() {
+export const GET = withErrors(async () => {
   const rows = await sql`
     select id, name, subject_tpl, body_tpl, kind, is_default, updated_at
     from templates order by kind, is_default desc, name
   `;
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(req: Request) {
+export const POST = withErrors(async (req: Request) => {
   const parsed = Create.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "A template name is required" }, { status: 400 });
@@ -45,4 +46,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ id });
-}
+});

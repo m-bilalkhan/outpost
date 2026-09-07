@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 import { env } from "@/lib/env";
 import { render } from "@/lib/template";
 import { htmlToPlainText, sanitizeEmailHtml } from "@/lib/html";
@@ -35,10 +36,10 @@ type Template = {
   default_vars: Record<string, string>;
 };
 
-export async function POST(
+export const POST = withErrors(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   const templateId = parsed.success ? parsed.data.templateId : undefined;
@@ -118,4 +119,4 @@ export async function POST(
   `;
 
   return NextResponse.json({ id: message.id });
-}
+});

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 import { env } from "@/lib/env";
 import { missingVars } from "@/lib/template";
 import { zonedToUtc } from "@/lib/time";
@@ -12,10 +13,10 @@ const Body = z.object({
   runAtLocal: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/),
 });
 
-export async function POST(
+export const POST = withErrors(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -80,4 +81,4 @@ export async function POST(
   `;
 
   return NextResponse.json({ ok: true, jobId: job.id, runAt: job.run_at });
-}
+});

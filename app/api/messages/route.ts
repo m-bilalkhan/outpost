@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 import { env } from "@/lib/env";
 import { guessFromEmail, render } from "@/lib/template";
 import { htmlToPlainText, sanitizeEmailHtml } from "@/lib/html";
@@ -29,7 +30,7 @@ type Template = {
   default_vars: Record<string, string>;
 };
 
-export async function POST(req: Request) {
+export const POST = withErrors(async (req: Request) => {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
@@ -92,4 +93,4 @@ export async function POST(req: Request) {
   `;
 
   return NextResponse.json({ id: message.id });
-}
+});

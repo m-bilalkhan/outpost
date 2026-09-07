@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { withErrors } from "@/lib/api";
 import { guessFromEmail } from "@/lib/template";
 
 export const runtime = "nodejs";
@@ -15,15 +16,15 @@ const Create = z.object({
   notes: z.string().max(5000).optional(),
 });
 
-export async function GET() {
+export const GET = withErrors(async () => {
   const rows = await sql`
     select id, email, first_name, last_name, company, role, notes, created_at
     from contacts order by created_at desc
   `;
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(req: Request) {
+export const POST = withErrors(async (req: Request) => {
   const parsed = Create.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
@@ -45,4 +46,4 @@ export async function POST(req: Request) {
     returning id
   `;
   return NextResponse.json({ id: row.id });
-}
+});

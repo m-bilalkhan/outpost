@@ -25,11 +25,20 @@ async function sign(secret: string, message: string): Promise<string> {
   return toHex(sig);
 }
 
+/** A bare hostname is not a URL: fetch() rejects it and the tick silently
+ *  never happens. Accept either spelling and normalise. */
+function baseUrl(raw: string): string {
+  const trimmed = (raw ?? "").trim().replace(/\/+$/, "");
+  if (!trimmed) throw new Error("OUTPOST_URL is not set in wrangler.toml");
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 async function pokeOutpost(env: Env): Promise<Response> {
+  const base = baseUrl(env.OUTPOST_URL);
   const ts = Math.floor(Date.now() / 1000).toString();
   const sig = await sign(env.CRON_SHARED_SECRET, ts);
 
-  const res = await fetch(`${env.OUTPOST_URL}/api/cron/tick`, {
+  const res = await fetch(`${base}/api/cron/tick`, {
     method: "POST",
     headers: {
       "x-outpost-ts": ts,

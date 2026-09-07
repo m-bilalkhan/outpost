@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { withErrors } from "@/lib/api";
 import { env } from "@/lib/env";
 import { tick } from "@/lib/jobs";
 
@@ -23,7 +24,7 @@ function authorized(req: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-async function handle(req: Request) {
+const handle = withErrors(async (req: Request) => {
   if (!authorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -35,7 +36,7 @@ async function handle(req: Request) {
     console.error("[outpost] tick failed:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});
 
 export const POST = handle;
 export const GET = handle;
