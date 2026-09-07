@@ -13,7 +13,7 @@ type Row = {
   contact_id: string | null;
   to_email: string;
   subject: string;
-  body_text: string;
+  body_html: string;
   status: string;
   sent_at: string | null;
   last_error: string | null;
@@ -51,7 +51,7 @@ export default async function MessagePage({
   const { id } = await params;
 
   const [row] = await sql<Row[]>`
-    select m.id, m.contact_id, m.to_email, m.subject, m.body_text, m.status,
+    select m.id, m.contact_id, m.to_email, m.subject, m.body_html, m.status,
            m.sent_at, m.last_error, m.thread_id, m.parent_id, j.run_at,
            c.first_name, c.last_name, c.company, c.role
     from messages m
@@ -112,7 +112,7 @@ export default async function MessagePage({
         }}
         toEmail={row.to_email}
         initialSubject={row.subject}
-        initialBody={row.body_text}
+        initialBodyHtml={row.body_html}
         status={row.status}
         tz={env.tz}
         defaultLocal={defaultLocalValue(env.tz, 10)}

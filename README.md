@@ -129,7 +129,21 @@ This app can send mail as you, so put Google login in front of it in Zero Trust.
 
 ## 5. Templates
 
-Templates live in the `templates` table; `db/schema.sql` seeds one. Variables
+Template and message bodies are **rich text**. The toolbar gives you bold,
+italic, underline, strikethrough, bulleted and numbered lists, links, quotes and
+clear-formatting — deliberately no headings, colours, font sizes or images,
+because those are what make a one-to-one email look like a marketing blast, and
+they are also what email clients render worst.
+
+What you see in the editor is what gets sent. A plain-text version is generated
+from it automatically and sent alongside as the `text/plain` alternative; a
+message with no plain-text part looks like bulk mail to spam filters.
+
+Everything you type is sanitized **on the server** against a small allowlist
+before it is stored, so pasting from Word or a web page drops the `mso-` junk,
+classes and inline styles rather than carrying them into your email.
+
+Variables
 are `{{first_name}}`, `{{last_name}}`, `{{company}}`, `{{role}}`, `{{email}}`
 and `{{my_name}}`. Anything unfilled stays visible as `{{like_this}}` and
 **blocks scheduling** — both in the UI and again in the handler.
@@ -182,6 +196,15 @@ three-message chain reads as one conversation.
 > yesterday. Check before you schedule. Everything currently queued is listed
 > under **Going out next** on the home page with a one-click cancel, so nothing
 > should ever surprise you.
+
+## A note on placeholders in rich text
+
+If you bold half of a placeholder, the underlying HTML becomes
+`{{first<strong>_name}}` and a naive renderer would send "Hi {{first_name}}".
+Outpost repairs that on save: it strips markup found between `{{` and `}}`, then
+re-sanitizes. If a placeholder somehow survives unrendered, the scheduling guard
+still refuses the send, so the worst case is a clear error rather than a bad
+email.
 
 ## Applying a migration
 

@@ -9,3 +9,38 @@ body {
 @media (prefers-color-scheme: dark) {
   body { background: #0d1211; color: #dde5e3; }
 }
+
+/* The editor surface. These styles are for editing only -- what actually
+   ships in the email is inlined at send time by toEmailHtml(). */
+.outpost-prose {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.outpost-prose p { margin: 0 0 1em 0; }
+.outpost-prose p:last-child { margin-bottom: 0; }
+.outpost-prose ul,
+.outpost-prose ol { margin: 0 0 1em 0; padding-left: 1.5em; }
+.outpost-prose ul { list-style: disc; }
+.outpost-prose ol { list-style: decimal; }
+.outpost-prose li { margin: 0 0 0.25em 0; }
+.outpost-prose blockquote {
+  margin: 0 0 1em 0;
+  padding-left: 1em;
+  border-left: 3px solid rgb(0 0 0 / 0.15);
+  opacity: 0.85;
+}
+.outpost-prose a { color: #0e6b58; text-decoration: underline; }
+.outpost-prose strong { font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  .outpost-prose blockquote { border-left-color: rgb(255 255 255 / 0.2); }
+  .outpost-prose a { color: #4fc4a6; }
+}
+
+/* Placeholder text in an empty editor. */
+.outpost-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  opacity: 0.4;
+}

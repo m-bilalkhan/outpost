@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
-import { textToHtml } from "@/lib/template";
+import { htmlToPlainText, sanitizeEmailHtml } from "@/lib/html";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const Patch = z.object({
   subject: z.string().max(998),
-  bodyText: z.string(),
+  bodyHtml: z.string().max(500_000),
 });
 
 export async function PATCH(
@@ -18,14 +18,17 @@ export async function PATCH(
   const { id } = await params;
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "subject and bodyText are required" }, { status: 400 });
+    return NextResponse.json({ error: "subject and bodyHtml are required" }, { status: 400 });
   }
+
+  // Never trust what the browser sends: sanitize here, not in the editor.
+  const bodyHtml = sanitizeEmailHtml(parsed.data.bodyHtml);
 
   const rows = await sql<{ id: string }[]>`
     update messages set
       subject    = ${parsed.data.subject},
-      body_text  = ${parsed.data.bodyText},
-      body_html  = ${textToHtml(parsed.data.bodyText)},
+      body_html  = ${bodyHtml},
+      body_text  = ${htmlToPlainText(bodyHtml)},
       updated_at = now()
     where id = ${id} and status in ('draft','scheduled','failed')
     returning id

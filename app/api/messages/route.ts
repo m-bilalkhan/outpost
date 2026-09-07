@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
 import { env } from "@/lib/env";
-import { guessFromEmail, render, textToHtml } from "@/lib/template";
+import { guessFromEmail, render } from "@/lib/template";
+import { htmlToPlainText, sanitizeEmailHtml } from "@/lib/html";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,14 +77,16 @@ export async function POST(req: Request) {
   };
 
   const subject = render(template.subject_tpl, vars);
-  const bodyText = render(template.body_tpl, vars);
+  // Template bodies are HTML. body_text is derived, never authored.
+  const bodyHtml = sanitizeEmailHtml(render(template.body_tpl, vars));
+  const bodyText = htmlToPlainText(bodyHtml);
 
   const [message] = await sql<{ id: string }[]>`
     insert into messages (contact_id, template_id, to_email, to_name, subject, body_text, body_html)
     values (
       ${contact.id}, ${template.id}, ${contact.email},
       ${[contact.first_name, contact.last_name].filter(Boolean).join(" ") || null},
-      ${subject}, ${bodyText}, ${textToHtml(bodyText)}
+      ${subject}, ${bodyText}, ${bodyHtml}
     )
     returning id
   `;

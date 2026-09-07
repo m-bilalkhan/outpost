@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { sanitizeEmailHtml } from "@/lib/html";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     }
     const [row] = await tx<{ id: string }[]>`
       insert into templates (name, subject_tpl, body_tpl, kind, is_default)
-      values (${t.name}, ${t.subjectTpl}, ${t.bodyTpl}, ${t.kind}, ${t.isDefault})
+      values (${t.name}, ${t.subjectTpl}, ${sanitizeEmailHtml(t.bodyTpl)}, ${t.kind}, ${t.isDefault})
       returning id
     `;
     return row.id;

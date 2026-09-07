@@ -3,6 +3,7 @@ import { sql } from "@/lib/db";
 import { env } from "@/lib/env";
 import { appendToSent, buildRaw, sendRaw } from "@/lib/mailer";
 import { missingVars } from "@/lib/template";
+import { toEmailHtml } from "@/lib/html";
 import { logEvent, PermanentError, register } from "../registry";
 
 type MessageRow = {
@@ -52,7 +53,7 @@ register("email.send", {
       to: msg.to_email,
       toName: msg.to_name,
       subject: msg.subject,
-      html: msg.body_html,
+      html: toEmailHtml(msg.body_html),
       text: msg.body_text,
       messageId: rfcMessageId,
       inReplyTo: msg.in_reply_to,

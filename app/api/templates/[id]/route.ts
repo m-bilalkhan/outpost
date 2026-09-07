@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { sanitizeEmailHtml } from "@/lib/html";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export async function PATCH(
       update templates set
         name        = ${t.name},
         subject_tpl = ${t.subjectTpl},
-        body_tpl    = ${t.bodyTpl},
+        body_tpl    = ${sanitizeEmailHtml(t.bodyTpl)},
         kind        = ${t.kind},
         is_default  = ${t.isDefault},
         updated_at  = now()

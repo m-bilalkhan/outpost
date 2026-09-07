@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { missingVars, substitute, textToHtml } from "@/lib/template";
+import { missingVars, substitute } from "@/lib/template";
+import { RichEditor } from "../../rich-editor";
 import { btn, btnDanger, btnGhost, field, label } from "../../ui";
 
 /** Variables Outpost can fill from the contact record. */
@@ -30,7 +31,7 @@ type Props = {
   contact: ContactFields;
   toEmail: string;
   initialSubject: string;
-  initialBody: string;
+  initialBodyHtml: string;
   status: string;
   defaultLocal: string;
   scheduledLocal: string | null;
@@ -40,10 +41,9 @@ type Props = {
 export function Editor(props: Props) {
   const router = useRouter();
   const [subject, setSubject] = useState(props.initialSubject);
-  const [body, setBody] = useState(props.initialBody);
+  const [body, setBody] = useState(props.initialBodyHtml);
   const [fields, setFields] = useState<ContactFields>(props.contact);
   const [runAt, setRunAt] = useState(props.scheduledLocal ?? props.defaultLocal);
-  const [tab, setTab] = useState<"write" | "preview">("write");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,13 +110,13 @@ export function Editor(props: Props) {
 
   const save = () =>
     guarded(async () => {
-      await call(`/api/messages/${props.id}`, "PATCH", { subject, bodyText: body });
+      await call(`/api/messages/${props.id}`, "PATCH", { subject, bodyHtml: body });
       router.refresh();
     });
 
   const schedule = () =>
     guarded(async () => {
-      await call(`/api/messages/${props.id}`, "PATCH", { subject, bodyText: body });
+      await call(`/api/messages/${props.id}`, "PATCH", { subject, bodyHtml: body });
       await call(`/api/messages/${props.id}/schedule`, "POST", { runAtLocal: runAt });
       router.push("/");
     });
@@ -142,42 +142,12 @@ export function Editor(props: Props) {
       </label>
 
       <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-4">
-          <span className={label}>Body</span>
-          <div className="flex gap-3 text-xs">
-            {(["write", "preview"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={
-                  tab === t
-                    ? "font-semibold text-emerald-800 dark:text-emerald-400"
-                    : "opacity-50 hover:opacity-100"
-                }
-              >
-                {t === "write" ? "Write" : "Preview"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {tab === "write" ? (
-          <textarea
-            value={body}
-            disabled={locked}
-            onChange={(e) => setBody(e.target.value)}
-            rows={16}
-            className={`${field} font-mono leading-relaxed`}
-          />
-        ) : (
-          <div className="min-h-[24rem] rounded border border-black/15 bg-white p-4 dark:border-white/15 dark:bg-white/5">
-            <div
-              className="prose-sm text-[15px] leading-relaxed [&_p]:mb-4"
-              // textToHtml escapes every character it does not itself emit.
-              dangerouslySetInnerHTML={{ __html: textToHtml(body) }}
-            />
-          </div>
-        )}
+        <span className={label}>Body</span>
+        <RichEditor value={body} onChange={setBody} editable={!locked} />
+        <p className="text-xs opacity-50">
+          What you see is what gets sent. A plain-text version is generated
+          automatically and sent alongside it.
+        </p>
       </div>
 
       {!locked && fillable.length > 0 && (

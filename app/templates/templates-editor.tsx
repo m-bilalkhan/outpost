@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { missingVars } from "@/lib/template";
+import { RichEditor } from "../rich-editor";
 import { btn, btnDanger, btnGhost, card, field, label } from "../ui";
 
 export type TemplateKind = "outreach" | "followup";
@@ -51,14 +52,15 @@ export function TemplatesEditor({ templates }: { templates: Template[] }) {
                 name: "New follow-up",
                 subjectTpl: "",
                 bodyTpl:
-                  "Hi {{first_name}},\n\nQuick follow-up on my note below.\n\nBest,\n{{my_name}}",
+                  "<p>Hi {{first_name}},</p><p>Quick follow-up on my note below.</p><p>Best,<br>{{my_name}}</p>",
                 kind,
                 isDefault: !templates.some((t) => t.kind === "followup"),
               }
             : {
                 name: "New template",
                 subjectTpl: "Quick question, {{first_name}}",
-                bodyTpl: "Hi {{first_name}},\n\n\n\nBest,\n{{my_name}}",
+                bodyTpl:
+                  "<p>Hi {{first_name}},</p><p></p><p>Best,<br>{{my_name}}</p>",
                 kind,
                 isDefault: !templates.some((t) => t.kind === "outreach"),
               },
@@ -213,15 +215,10 @@ function TemplateCard({
               className={field}
             />
           </label>
-          <label className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className={label}>Body</span>
-            <textarea
-              rows={12}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              className={`${field} font-mono leading-relaxed`}
-            />
-          </label>
+            <RichEditor value={body} onChange={setBody} minHeight="14rem" />
+          </div>
 
           {unknown.length > 0 && (
             <p className="rounded border border-amber-400/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">

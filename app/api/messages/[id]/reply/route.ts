@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
 import { env } from "@/lib/env";
-import { render, textToHtml } from "@/lib/template";
+import { render } from "@/lib/template";
+import { htmlToPlainText, sanitizeEmailHtml } from "@/lib/html";
 import { buildReferences, replySubject } from "@/lib/thread";
 
 export const runtime = "nodejs";
@@ -97,7 +98,8 @@ export async function POST(
     ? render(template.subject_tpl, vars)
     : replySubject(source.subject);
 
-  const bodyText = render(template.body_tpl, vars);
+  const bodyHtml = sanitizeEmailHtml(render(template.body_tpl, vars));
+  const bodyText = htmlToPlainText(bodyHtml);
   const references = buildReferences(source.rfc_references, source.smtp_message_id);
 
   const [message] = await sql<{ id: string }[]>`
@@ -108,7 +110,7 @@ export async function POST(
     )
     values (
       ${source.contact_id}, ${template.id}, ${source.to_email}, ${source.to_name},
-      ${subject}, ${bodyText}, ${textToHtml(bodyText)},
+      ${subject}, ${bodyText}, ${bodyHtml},
       ${source.thread_id ?? source.id}, ${source.id},
       ${source.smtp_message_id}, ${references}
     )
