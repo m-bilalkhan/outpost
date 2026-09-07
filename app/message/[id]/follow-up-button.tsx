@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { fetchJson } from "@/lib/fetch-json";
 import { btn } from "../../ui";
 
 export function FollowUpButton({ messageId }: { messageId: string }) {
@@ -13,13 +14,14 @@ export function FollowUpButton({ messageId }: { messageId: string }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/messages/${messageId}/reply`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: "{}",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not start a follow-up");
+      const data = await fetchJson<{ id: string }>(
+        `/api/messages/${messageId}/reply`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        },
+      );
       router.push(`/message/${data.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

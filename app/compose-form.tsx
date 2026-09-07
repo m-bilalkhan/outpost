@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { fetchJson } from "@/lib/fetch-json";
 
 type Template = { id: string; name: string };
 
@@ -17,13 +18,11 @@ export function ComposeForm({ templates }: { templates: Template[] }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/messages", {
+      const data = await fetchJson<{ id: string }>("/api/messages", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email, templateId: templateId || undefined }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not create the draft");
       router.push(`/message/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

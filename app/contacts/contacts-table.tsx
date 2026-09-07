@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { fetchJson } from "@/lib/fetch-json";
 import { btn, btnDanger, btnGhost, card, field, label } from "../ui";
 
 export type Contact = {
@@ -40,13 +41,11 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/contacts", {
+      await fetchJson("/api/contacts", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email: newEmail }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not add");
       setNewEmail("");
       router.refresh();
     } catch (err) {
@@ -116,13 +115,11 @@ function ContactRow({
       const body: Record<string, string> = {};
       for (const [key] of EDITABLE) body[KEY_TO_API[key]] = draft[key] ?? "";
       body.notes = draft.notes ?? "";
-      const res = await fetch(`/api/contacts/${contact.id}`, {
+      await fetchJson(`/api/contacts/${contact.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not save");
       onToggle();
       router.refresh();
     } catch (e) {
@@ -136,9 +133,7 @@ function ContactRow({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/contacts/${contact.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not delete");
+      await fetchJson(`/api/contacts/${contact.id}`, { method: "DELETE" });
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { fetchJson } from "@/lib/fetch-json";
 import { missingVars, substitute } from "@/lib/template";
 import { RichEditor } from "../../rich-editor";
 import { btn, btnDanger, btnGhost, field, label } from "../../ui";
@@ -63,14 +64,11 @@ export function Editor(props: Props) {
   const locked = props.status === "sent" || props.status === "cancelled";
 
   async function call(path: string, method: string, payload?: unknown) {
-    const res = await fetch(path, {
+    return fetchJson(path, {
       method,
       headers: { "content-type": "application/json" },
       body: payload ? JSON.stringify(payload) : undefined,
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error ?? `${method} failed`);
-    return data;
   }
 
   async function guarded(fn: () => Promise<void>) {

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { fetchJson } from "@/lib/fetch-json";
 import { missingVars } from "@/lib/template";
 import { RichEditor } from "../rich-editor";
 import { btn, btnDanger, btnGhost, card, field, label } from "../ui";
@@ -43,7 +44,7 @@ export function TemplatesEditor({ templates }: { templates: Template[] }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/templates", {
+      const data = await fetchJson<{ id: string }>("/api/templates", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
@@ -66,8 +67,6 @@ export function TemplatesEditor({ templates }: { templates: Template[] }) {
               },
         ),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not create");
       setOpenId(data.id);
       router.refresh();
     } catch (e) {
@@ -143,7 +142,7 @@ function TemplateCard({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/templates/${template.id}`, {
+      await fetchJson(`/api/templates/${template.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -154,8 +153,6 @@ function TemplateCard({
           isDefault,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not save");
       onToggle();
       router.refresh();
     } catch (e) {
@@ -169,9 +166,7 @@ function TemplateCard({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/templates/${template.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not delete");
+      await fetchJson(`/api/templates/${template.id}`, { method: "DELETE" });
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
