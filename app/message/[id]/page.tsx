@@ -72,6 +72,15 @@ export default async function MessagePage({
     order by m.created_at
   `;
 
+  const followupTemplates =
+    row.status === "sent"
+      ? await sql<{ id: string; name: string }[]>`
+          select id, name from templates
+          where kind = 'followup'
+          order by is_default desc, name
+        `
+      : [];
+
   const heading =
     row.status === "sent"
       ? `Sent ${row.sent_at ? formatInZone(row.sent_at, env.tz) : ""}`
@@ -121,7 +130,7 @@ export default async function MessagePage({
 
       {row.status === "sent" && (
         <div className="border-t border-black/10 pt-5 dark:border-white/10">
-          <FollowUpButton messageId={row.id} />
+          <FollowUpButton messageId={row.id} templates={followupTemplates} />
         </div>
       )}
     </main>
