@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { fetchJson } from "@/lib/fetch-json";
+import { formatInZone } from "@/lib/time";
 import { missingVars, substitute } from "@/lib/template";
 import { RichEditor } from "../../rich-editor";
 import { btn, btnDanger, btnGhost, field, label } from "../../ui";
@@ -26,6 +27,8 @@ const TITLES: Record<FillField, string> = {
 
 export type ContactFields = Record<FillField, string>;
 
+type PriorSent = { id: string; subject: string; sentAt: string };
+
 type Props = {
   id: string;
   contactId: string | null;
@@ -37,6 +40,7 @@ type Props = {
   defaultLocal: string;
   scheduledLocal: string | null;
   tz: string;
+  priorSent: PriorSent[];
 };
 
 export function Editor(props: Props) {
@@ -114,6 +118,12 @@ export function Editor(props: Props) {
 
   const schedule = () =>
     guarded(async () => {
+      if (props.priorSent.length > 0) {
+        const ok = window.confirm(
+          `You already sent an email to ${props.toEmail}. Send this one anyway?`,
+        );
+        if (!ok) return;
+      }
       await call(`/api/messages/${props.id}`, "PATCH", { subject, bodyHtml: body });
       await call(`/api/messages/${props.id}/schedule`, "POST", { runAtLocal: runAt });
       router.push("/");
@@ -128,6 +138,25 @@ export function Editor(props: Props) {
   return (
     <div className="flex flex-col gap-4">
       <div className="text-xs opacity-60">To: {props.toEmail}</div>
+
+      {props.priorSent.length > 0 && (
+        <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+          <p>
+            <strong>You&rsquo;ve already emailed {props.toEmail}</strong> outside
+            this thread:
+          </p>
+          <ul className="mt-1 list-disc pl-5">
+            {props.priorSent.map((p) => (
+              <li key={p.id}>
+                <a href={`/message/${p.id}`} className="underline hover:no-underline">
+                  {p.subject || "(no subject)"}
+                </a>{" "}
+                &middot; sent {formatInZone(p.sentAt, props.tz)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <label className="flex flex-col gap-1">
         <span className={label}>Subject</span>

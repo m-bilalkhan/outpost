@@ -72,6 +72,19 @@ export default async function MessagePage({
     order by m.created_at
   `;
 
+  const priorSent =
+    row.status === "draft" || row.status === "scheduled"
+      ? await sql<{ id: string; subject: string; sent_at: string }[]>`
+          select id, subject, sent_at
+          from messages
+          where status = 'sent'
+            and lower(to_email) = lower(${row.to_email})
+            and thread_id <> ${row.thread_id ?? row.id}
+          order by sent_at desc
+          limit 5
+        `
+      : [];
+
   const followupTemplates =
     row.status === "sent"
       ? await sql<{ id: string; name: string }[]>`
@@ -126,6 +139,11 @@ export default async function MessagePage({
         tz={env.tz}
         defaultLocal={defaultLocalValue(env.tz, 10)}
         scheduledLocal={row.run_at ? toLocalInput(row.run_at, env.tz) : null}
+        priorSent={priorSent.map((p) => ({
+          id: p.id,
+          subject: p.subject,
+          sentAt: p.sent_at,
+        }))}
       />
 
       {row.status === "sent" && (
