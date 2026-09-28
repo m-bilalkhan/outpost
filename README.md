@@ -156,7 +156,7 @@ used silently, and a value you have corrected is never overwritten.
 
 | | |
 |---|---|
-| `/` | Compose from an address, and the outbox |
+| `/` | Compose from an address, and the outbox: every message, 25 per page, searchable by subject, name or address |
 | `/message/[id]` | Review, fill blanks, preview, schedule |
 | `/contacts` | Add, edit and delete people |
 | `/templates` | Outreach and follow-up templates, one default each |
