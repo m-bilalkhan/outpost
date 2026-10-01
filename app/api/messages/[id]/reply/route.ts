@@ -4,7 +4,7 @@ import { sql } from "@/lib/db";
 import { withErrors } from "@/lib/api";
 import { env } from "@/lib/env";
 import { render } from "@/lib/template";
-import { htmlToPlainText, sanitizeEmailHtml } from "@/lib/html";
+import { htmlToPlainText, quoteOriginal, sanitizeEmailHtml } from "@/lib/html";
 import { buildReferences, replySubject } from "@/lib/thread";
 
 export const runtime = "nodejs";
@@ -23,6 +23,8 @@ type Source = {
   smtp_message_id: string | null;
   thread_id: string | null;
   rfc_references: string | null;
+  body_html: string;
+  sent_at: string;
   first_name: string | null;
   last_name: string | null;
   company: string | null;
@@ -47,6 +49,7 @@ export const POST = withErrors(async (
   const [source] = await sql<Source[]>`
     select m.id, m.contact_id, m.template_id, m.to_email, m.to_name, m.subject,
            m.status, m.smtp_message_id, m.thread_id, m.rfc_references,
+           m.body_html, m.sent_at,
            c.first_name, c.last_name, c.company, c.role
     from messages m
     left join contacts c on c.id = m.contact_id
@@ -99,7 +102,16 @@ export const POST = withErrors(async (
     ? render(template.subject_tpl, vars)
     : replySubject(source.subject);
 
-  const bodyHtml = sanitizeEmailHtml(render(template.body_tpl, vars));
+  // Match what a human hitting "Reply" would send: new text on top, the
+  // original visibly quoted below it -- not just linked by headers.
+  const quote = quoteOriginal({
+    fromName: env.mailFromName,
+    fromEmail: env.mailUser,
+    sentAt: source.sent_at,
+    tz: env.tz,
+    bodyHtml: source.body_html,
+  });
+  const bodyHtml = sanitizeEmailHtml(render(template.body_tpl, vars) + quote);
   const bodyText = htmlToPlainText(bodyHtml);
   const references = buildReferences(source.rfc_references, source.smtp_message_id);
 

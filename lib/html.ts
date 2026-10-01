@@ -58,16 +58,62 @@ export function htmlToPlainText(html: string): string {
   }).trim();
 }
 
-/** Legacy plain text -> HTML, for anything written before rich text existed. */
-export function plainTextToHtml(text: string): string {
-  const esc = (text ?? "")
+function escapeHtml(s: string): string {
+  return (s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-  return esc
+}
+
+/** Legacy plain text -> HTML, for anything written before rich text existed. */
+export function plainTextToHtml(text: string): string {
+  return escapeHtml(text)
     .split(/\r?\n\r?\n/)
     .map((p) => `<p>${p.replace(/\r?\n/g, "<br>")}</p>`)
     .join("");
+}
+
+/**
+ * The quoted block a mail client inserts under "Reply": who wrote the
+ * original, when, and its body indented below. A follow-up that says
+ * "my note below" is a lie without this -- it's what makes the earlier
+ * message actually visible in the one you're sending now, the way a human
+ * hitting Reply would produce, instead of relying on the recipient's client
+ * to stitch things together from headers alone.
+ */
+export function quoteOriginal(params: {
+  fromName: string;
+  fromEmail: string;
+  sentAt: Date | string;
+  tz: string;
+  bodyHtml: string;
+}): string {
+  // Built from parts, not a single Intl format string, to land on the
+  // "<weekday>, <month> <day>, <year> at <time>" phrasing recipients already
+  // recognize from Gmail/Outlook rather than an unfamiliar machine-y layout.
+  const date = typeof params.sentAt === "string" ? new Date(params.sentAt) : params.sentAt;
+  const parts: Record<string, string> = {};
+  for (const p of new Intl.DateTimeFormat("en-US", {
+    timeZone: params.tz,
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date)) {
+    if (p.type !== "literal") parts[p.type] = p.value;
+  }
+  const when =
+    `${parts.weekday}, ${parts.month} ${parts.day}, ${parts.year} at ` +
+    `${parts.hour}:${parts.minute} ${parts.dayPeriod}`;
+
+  const who = params.fromName
+    ? `${escapeHtml(params.fromName)} &lt;${escapeHtml(params.fromEmail)}&gt;`
+    : escapeHtml(params.fromEmail);
+
+  return `<p>On ${when}, ${who} wrote:</p><blockquote>${params.bodyHtml}</blockquote>`;
 }
 
 /**
