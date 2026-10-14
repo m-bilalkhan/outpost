@@ -154,9 +154,20 @@ const IMAGE_ONLY_P = /<p>((?:<a [^>]*>)?<img [^>]*>(?:<\/a>)?)<\/p>/g;
 const LOOM_LINK_P =
   /<p>(<a href="https?:\/\/(?:www\.)?loom\.com\/[^"]*">(?:(?!<\/a>)[^])*<\/a>)<\/p>/g;
 const CENTERED_P = '<p style="margin:0 0 1em 0;text-align:center">$1</p>';
+/** Caption directly above its thumbnail: pull them together instead of
+ *  leaving a full paragraph gap between the two. */
+const CAPTION_THEN_IMAGE_P = new RegExp(
+  LOOM_LINK_P.source + IMAGE_ONLY_P.source,
+  "g",
+);
 
 export function toEmailHtml(storedHtml: string): string {
   let body = (storedHtml ?? "")
+    .replace(
+      CAPTION_THEN_IMAGE_P,
+      '<p style="margin:0 0 .4em 0;text-align:center">$1</p>' +
+        '<p style="margin:0 0 1em 0;text-align:center">$2</p>',
+    )
     .replace(IMAGE_ONLY_P, CENTERED_P)
     .replace(LOOM_LINK_P, CENTERED_P);
   for (const [pattern, replacement] of INLINE) body = body.replace(pattern, replacement);

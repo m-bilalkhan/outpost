@@ -50,3 +50,4 @@ body {
 .outpost-prose p:has(> a > img:only-child),
 .outpost-prose p:has(> img:only-child),
 .outpost-prose p:has(> a[href*="loom.com"]:only-child) { text-align: center; }
+.outpost-prose p:has(> a[href*="loom.com"]:only-child):has(+ p > a > img) { margin-bottom: 0.4em; }

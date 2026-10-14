@@ -70,6 +70,12 @@ describe("video thumbnail", () => {
     expect(out.match(/text-align:center/g)).toHaveLength(1);
   });
 
+  it("tightens the gap between a Loom caption and its thumbnail", () => {
+    const caption = '<a href="https://www.loom.com/share/abc">Watch the video</a>';
+    const out = toEmailHtml(sanitizeEmailHtml(`<p>${caption}</p><p>${loom}</p>`));
+    expect(out).toMatch(/<p style="margin:0 0 \.4em 0;text-align:center"><a [^>]*>Watch the video<\/a><\/p><p style="margin:0 0 1em 0;text-align:center"><a [^>]*><img /);
+  });
+
   it("centres a paragraph that holds only the thumbnail, not text", () => {
     const out = toEmailHtml(sanitizeEmailHtml(`<p>Hello</p><p>${loom}</p>`));
     expect(out).toContain('<p style="margin:0 0 1em 0">Hello</p>');
