@@ -138,11 +138,12 @@ const INLINE: [RegExp, string][] = [
     '<blockquote style="margin:0 0 1em 0;padding-left:1em;border-left:3px solid #d0d7d5;color:#555">',
   ],
   [/<a /g, '<a style="color:#0e6b58" '],
-  // width= as well as max-width: Outlook desktop ignores max-width. The source
-  // is ~1280px wide, so 560 stays sharp on high-density screens.
+  // Fluid: fills the message column, capped so it doesn't balloon on a wide
+  // desktop pane. width= is the Outlook desktop fallback (it ignores
+  // max-width and would otherwise show the full-size source).
   [
     /<img /g,
-    '<img width="560" style="display:block;margin:0 auto;width:560px;max-width:100%;height:auto;border:0" ',
+    '<img width="720" style="display:block;margin:0 auto;width:100%;max-width:720px;height:auto;border:0" ',
   ],
 ];
 

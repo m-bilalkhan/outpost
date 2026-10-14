@@ -59,8 +59,8 @@ describe("video thumbnail", () => {
 
   it("sizes the image at send time", () => {
     const out = toEmailHtml(sanitizeEmailHtml(loom));
-    expect(out).toContain('width="560"');
-    expect(out).toContain("max-width:100%");
+    expect(out).toContain("width:100%;max-width:720px;height:auto");
+    expect(out).toContain('width="720"');
   });
 
   it("centres a lone Loom text link, but not a link inside a sentence", () => {
