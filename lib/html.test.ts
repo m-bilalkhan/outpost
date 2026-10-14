@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { quoteOriginal, sanitizeEmailHtml } from "./html";
+import { quoteOriginal, sanitizeEmailHtml, toEmailHtml } from "./html";
 
 describe("quoteOriginal", () => {
   const base = {
@@ -39,5 +39,25 @@ describe("quoteOriginal", () => {
     const sanitized = sanitizeEmailHtml(`<p>Following up.</p>${html}`);
     expect(sanitized).toContain("<blockquote>");
     expect(sanitized).toContain("Hi there, quick question for you.");
+  });
+});
+
+describe("video thumbnail", () => {
+  const loom = `<a href="https://www.loom.com/share/abc"><img style="max-width:300px;" src="https://www.loom.com/v1/videos/abc/thumbnail.gif"></a>`;
+
+  it("keeps an https image inside its link and drops style", () => {
+    const out = sanitizeEmailHtml(loom);
+    expect(out).toContain('<img src="https://www.loom.com/v1/videos/abc/thumbnail.gif"');
+    expect(out).toContain('<a href="https://www.loom.com/share/abc">');
+    expect(out).not.toContain("style=");
+  });
+
+  it("drops non-https image sources", () => {
+    expect(sanitizeEmailHtml('<img src="data:image/gif;base64,AAAA">')).not.toContain("<img");
+    expect(sanitizeEmailHtml('<img src="http://x.test/a.gif">')).not.toContain("<img");
+  });
+
+  it("sizes the image at send time", () => {
+    expect(toEmailHtml(sanitizeEmailHtml(loom))).toContain("max-width:300px");
   });
 });

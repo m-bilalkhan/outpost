@@ -10,9 +10,16 @@ import { convert } from "html-to-text";
 const ALLOWED: sanitizeHtml.IOptions = {
   allowedTags: [
     "p", "br", "strong", "em", "u", "s", "a", "ul", "ol", "li", "blockquote",
+    "img",
   ],
-  allowedAttributes: { a: ["href"] },
+  // img exists for one reason: a video thumbnail inside its link. No style or
+  // size attributes survive; sizing is applied at send time.
+  allowedAttributes: { a: ["href"], img: ["src", "alt"] },
   allowedSchemes: ["http", "https", "mailto", "tel"],
+  // Remote images only, and never data: URIs (clients block them and they
+  // bloat the message).
+  allowedSchemesByTag: { img: ["https"] },
+  exclusiveFilter: (frame) => frame.tag === "img" && !frame.attribs.src,
   // No classes, no inline styles, no ids -- that is the whole point.
   allowedClasses: {},
   transformTags: {
@@ -131,6 +138,7 @@ const INLINE: [RegExp, string][] = [
     '<blockquote style="margin:0 0 1em 0;padding-left:1em;border-left:3px solid #d0d7d5;color:#555">',
   ],
   [/<a /g, '<a style="color:#0e6b58" '],
+  [/<img /g, '<img style="display:block;max-width:300px;height:auto;border:0" '],
 ];
 
 export function toEmailHtml(storedHtml: string): string {

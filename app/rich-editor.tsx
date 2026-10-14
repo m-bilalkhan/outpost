@@ -1,6 +1,7 @@
 "use client";
 
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import Image from "@tiptap/extension-image";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect } from "react";
 
@@ -11,9 +12,10 @@ type Props = {
   minHeight?: string;
 };
 
-/** Deliberately small. Headings, colours, font sizes and images all make a
- *  one-to-one email look like a marketing blast, which is the opposite of
- *  what outreach wants -- and they are the parts email clients render worst. */
+/** Deliberately small. Headings, colours and font sizes make a one-to-one
+ *  email look like a marketing blast, which is the opposite of what outreach
+ *  wants -- and they are the parts email clients render worst. Images exist
+ *  only so a Loom thumbnail can sit inside its link. */
 const EXTENSIONS = [
   StarterKit.configure({
     heading: false,
@@ -22,7 +24,14 @@ const EXTENSIONS = [
     horizontalRule: false,
     link: { openOnClick: false, autolink: true },
   }),
+  Image.configure({ inline: true, allowBase64: false }),
 ];
+
+/** Pasted text that is really HTML source, e.g. a Loom embed snippet. The
+ *  editor would otherwise insert the markup as literal characters. */
+const HTML_SOURCE = /^\s*<(a|p|div|img|ul|ol|blockquote|strong|em|br)[\s>/]/i;
+
+const LOOM_ID = /loom\.com\/(?:share|embed)\/([0-9a-f]{32})/i;
 
 export function RichEditor({ value, onChange, editable = true, minHeight = "20rem" }: Props) {
   const editor = useEditor({
@@ -34,6 +43,16 @@ export function RichEditor({ value, onChange, editable = true, minHeight = "20re
     immediatelyRender: false,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
+      handlePaste: (view, event) => {
+        const cb = event.clipboardData;
+        if (!cb || cb.getData("text/html")) return false;
+        const text = cb.getData("text/plain");
+        if (!HTML_SOURCE.test(text)) return false;
+        // insertContent parses through the schema, so anything the editor
+        // doesn't support is dropped rather than shown as text.
+        editor?.commands.insertContent(text.trim());
+        return true;
+      },
       attributes: {
         class: "outpost-prose focus:outline-none",
         style: `min-height:${minHeight}`,
@@ -83,6 +102,26 @@ function Toolbar({ editor }: { editor: Editor }) {
       return;
     }
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  }, [editor]);
+
+  const insertLoom = useCallback(() => {
+    const url = window.prompt("Loom share link", "https://www.loom.com/share/");
+    if (!url) return;
+    const id = LOOM_ID.exec(url)?.[1];
+    if (!id) {
+      window.alert("That doesn't look like a Loom share link.");
+      return;
+    }
+    const href = `https://www.loom.com/share/${id}`;
+    const thumb = `https://www.loom.com/v1/videos/${id}/thumbnail.gif`;
+    editor
+      .chain()
+      .focus()
+      .insertContent(
+        `<p><a href="${href}">Watch the video</a></p>` +
+          `<p><a href="${href}"><img src="${thumb}" alt="Watch the video"></a></p>`,
+      )
+      .run();
   }, [editor]);
 
   const B = ({
@@ -147,6 +186,9 @@ function Toolbar({ editor }: { editor: Editor }) {
       </B>
       <B label="Link" active={editor.isActive("link")} onClick={setLink}>
         &#128279;
+      </B>
+      <B label="Insert Loom video" onClick={insertLoom}>
+        <span className="text-xs">Loom</span>
       </B>
 
       <span className="mx-1 h-4 w-px bg-black/15 dark:bg-white/15" />
