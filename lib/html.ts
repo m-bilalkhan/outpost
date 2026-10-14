@@ -146,15 +146,18 @@ const INLINE: [RegExp, string][] = [
   ],
 ];
 
-/** A paragraph holding nothing but an image (optionally inside its link) is a
- *  video thumbnail; centre it. Text paragraphs stay left-aligned. */
+/** The video block: a paragraph holding nothing but a thumbnail (optionally
+ *  inside its link), or nothing but a single link to Loom, is centred so the
+ *  caption and thumbnail line up. Ordinary text paragraphs stay left-aligned. */
 const IMAGE_ONLY_P = /<p>((?:<a [^>]*>)?<img [^>]*>(?:<\/a>)?)<\/p>/g;
+const LOOM_LINK_P =
+  /<p>(<a href="https?:\/\/(?:www\.)?loom\.com\/[^"]*">(?:(?!<\/a>)[^])*<\/a>)<\/p>/g;
+const CENTERED_P = '<p style="margin:0 0 1em 0;text-align:center">$1</p>';
 
 export function toEmailHtml(storedHtml: string): string {
-  let body = (storedHtml ?? "").replace(
-    IMAGE_ONLY_P,
-    '<p style="margin:0 0 1em 0;text-align:center">$1</p>',
-  );
+  let body = (storedHtml ?? "")
+    .replace(IMAGE_ONLY_P, CENTERED_P)
+    .replace(LOOM_LINK_P, CENTERED_P);
   for (const [pattern, replacement] of INLINE) body = body.replace(pattern, replacement);
   return `<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#111">${body}</div>`;
 }

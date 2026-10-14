@@ -63,6 +63,13 @@ describe("video thumbnail", () => {
     expect(out).toContain("max-width:100%");
   });
 
+  it("centres a lone Loom text link, but not a link inside a sentence", () => {
+    const link = '<a href="https://www.loom.com/share/abc">Watch the video</a>';
+    const out = toEmailHtml(sanitizeEmailHtml(`<p>${link}</p><p>See ${link} and <a href="https://x.test/">this</a></p>`));
+    expect(out).toMatch(/text-align:center"><a [^>]*>Watch the video<\/a><\/p>/);
+    expect(out.match(/text-align:center/g)).toHaveLength(1);
+  });
+
   it("centres a paragraph that holds only the thumbnail, not text", () => {
     const out = toEmailHtml(sanitizeEmailHtml(`<p>Hello</p><p>${loom}</p>`));
     expect(out).toContain('<p style="margin:0 0 1em 0">Hello</p>');

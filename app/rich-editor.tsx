@@ -113,13 +113,13 @@ function Toolbar({ editor }: { editor: Editor }) {
       return;
     }
     const href = `https://www.loom.com/share/${id}`;
-    const thumb = `https://www.loom.com/v1/videos/${id}/thumbnail.gif`;
+    const thumb = `https://www.loom.com/v1/videos/${id}/thumbnail.jpg`;
     editor
       .chain()
       .focus()
       .insertContent(
-        `<p><a href="${href}">Watch the video</a></p>` +
-          `<p><a href="${href}"><img src="${thumb}" alt="Watch the video"></a></p>`,
+        `<p><a href="${href}"><img src="${thumb}" alt="Watch the RRP Vault Walkthrough"></a></p>` +
+        `<p><a href="${href}">▶ Watch the RRP Vault Walkthrough</a></p>`,
       )
       .run();
   }, [editor]);
