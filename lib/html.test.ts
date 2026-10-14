@@ -58,6 +58,14 @@ describe("video thumbnail", () => {
   });
 
   it("sizes the image at send time", () => {
-    expect(toEmailHtml(sanitizeEmailHtml(loom))).toContain("max-width:300px");
+    const out = toEmailHtml(sanitizeEmailHtml(loom));
+    expect(out).toContain('width="560"');
+    expect(out).toContain("max-width:100%");
+  });
+
+  it("centres a paragraph that holds only the thumbnail, not text", () => {
+    const out = toEmailHtml(sanitizeEmailHtml(`<p>Hello</p><p>${loom}</p>`));
+    expect(out).toContain('<p style="margin:0 0 1em 0">Hello</p>');
+    expect(out).toMatch(/<p style="margin:0 0 1em 0;text-align:center"><a [^>]*><img /);
   });
 });

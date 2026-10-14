@@ -138,11 +138,23 @@ const INLINE: [RegExp, string][] = [
     '<blockquote style="margin:0 0 1em 0;padding-left:1em;border-left:3px solid #d0d7d5;color:#555">',
   ],
   [/<a /g, '<a style="color:#0e6b58" '],
-  [/<img /g, '<img style="display:block;max-width:300px;height:auto;border:0" '],
+  // width= as well as max-width: Outlook desktop ignores max-width. The source
+  // is ~1280px wide, so 560 stays sharp on high-density screens.
+  [
+    /<img /g,
+    '<img width="560" style="display:block;margin:0 auto;width:560px;max-width:100%;height:auto;border:0" ',
+  ],
 ];
 
+/** A paragraph holding nothing but an image (optionally inside its link) is a
+ *  video thumbnail; centre it. Text paragraphs stay left-aligned. */
+const IMAGE_ONLY_P = /<p>((?:<a [^>]*>)?<img [^>]*>(?:<\/a>)?)<\/p>/g;
+
 export function toEmailHtml(storedHtml: string): string {
-  let body = storedHtml ?? "";
+  let body = (storedHtml ?? "").replace(
+    IMAGE_ONLY_P,
+    '<p style="margin:0 0 1em 0;text-align:center">$1</p>',
+  );
   for (const [pattern, replacement] of INLINE) body = body.replace(pattern, replacement);
   return `<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#111">${body}</div>`;
 }

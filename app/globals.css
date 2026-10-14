@@ -44,3 +44,8 @@ body {
   pointer-events: none;
   opacity: 0.4;
 }
+
+/* Video thumbnails: mirror what toEmailHtml() does at send time. */
+.outpost-prose img { display: block; margin: 0 auto; max-width: 560px; width: 100%; height: auto; }
+.outpost-prose p:has(> a > img:only-child),
+.outpost-prose p:has(> img:only-child) { text-align: center; }
